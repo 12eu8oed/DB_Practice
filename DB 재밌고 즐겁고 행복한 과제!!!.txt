@@ -1,0 +1,162 @@
+기존에 모시미 데이터베이스에서 쿼리짜기
+
+rollup 함수 간단해 진다.
+
+검색조건 추가 -> 매니저시도 먼저 화면에 넣음, 근무가능상태가 현재 몇명인지 전체 (Y, N)
+<select>
+기준이 없으니 하드코딩 가능
+
+
+List of Value (lov) 셀렉트 박스 or 자동완성 기능
+
+
+========== 헤현님 회의 메모 =====오후 4:24 2024-02-27=====
+
+mosimi.itb_manager_info
+mosimi.itb_manager_hope_area
+mosimi.itb_manager_hope_day
+mosimi.itb_common_area
+mosimi.itb_manager_detail
+
+
+검색조건
+시/도  , 근무가능상태 => select box (combo box) 
+(하드코딩_일단은)
+
+LOV (List of value)
+
+
+  select i.user_id
+     , i.manager_sys_id
+     , i.manager_nm
+     , d.career_yn 
+  from mosimi.itb_manager_info i
+     , mosimi.itb_manager_detail d
+ where i.manager_sys_id = d.manager_sys_id 
+ 
+ select i.user_id as '고객'
+     , i.manager_sys_id as '매니저'
+     , i.manager_nm as '매니저이름'
+     , d.career_yn as '가능여부'
+  from mosimi.itb_manager_info i
+     , mosimi.itb_manager_detail d
+ where i.manager_sys_id = d.manager_sys_id 
+
+
+========== 24-02-27 ==========
+
+필요한 컬럼(열) : 
+시	구	일	월	화	수	목	금	토
+
+itb_manager_hope_day . 에 일~토까지 근무가능여부가 Y, N 상태로 나와있음
+ - any_yn(상시), mon_yn ~~ sun_yn
+
+itb_common_area.sido_nm => 시  //  itb_common_area.sigungu_nm (구)
+
+일단 //일 월 화 수 목 금 토// 먼저 컬럼에 붙혀보자
+
+
+===== 오늘까지 한 쿼리 =====
+
+mosimi.itb_manager_info
+mosimi.itb_manager_hope_area
+mosimi.itb_manager_hope_day
+mosimi.itb_common_area
+mosimi.itb_manager_detail
+
+
+select c.sido_nm as '시'
+	, c.sigungu_nm as '구'
+	, h.any_yn
+	, h.mon_yn 
+	, h.tue_yn 
+	, h.wed_yn 
+	, h.thur_yn 
+	, h.fri_yn 
+	, h.sat_yn 
+	, h.sun_yn 
+from mosimi.itb_common_area c 
+	, mosimi.itb_manager_hope_day h
+where c.sido_nm = '서울특별시' or c.sido_nm = '경기도' or c.sido_nm = '대전광역시';
+
+
+DESCRIBE mosimi.itb_common_area;
+DESCRIBE mosimi.itb_manager_hope_day;
+
+-- order by ;
+
+-- Home --
+SELECT 
+--     mi.manager_sys_id,
+    ca.sido_nm AS 시,
+    ca.sigungu_nm AS 도,
+    mhd.any_yn AS 상시,
+    mhd.sun_yn AS 일,
+    mhd.mon_yn AS 월,
+    mhd.tue_yn AS 화,
+    mhd.wed_yn AS 수,
+    mhd.thur_yn AS 목,
+    mhd.fri_yn AS 금,
+    mhd.sat_yn AS 토
+FROM 
+    mosimi.itb_manager_info mi
+INNER JOIN 
+    mosimi.itb_manager_hope_day mhd ON mi.manager_sys_id = mhd.manager_sys_id
+INNER JOIN 
+    mosimi.itb_manager_hope_area mha ON mi.manager_sys_id = mha.manager_sys_id
+LEFT JOIN 
+    mosimi.itb_common_area ca ON ca.sido_cd = mha.hope_sido_cd AND ca.sigungu_cd = mha.hope_sigungu_cd
+GROUP BY 
+    mi.manager_sys_id, ca.sido_nm, ca.sigungu_nm, mhd.sun_yn, mhd.mon_yn, mhd.tue_yn, mhd.wed_yn, mhd.thur_yn, mhd.fri_yn, mhd.sat_yn
+ORDER BY 
+    mi.manager_sys_id;
+	
+	
+	
+===== 일단 24-02-28 현재까지 진행 상황 AM 10 : 25 =====
+
+일단 기본적인 틀은 완성한 것 같고 여기서 잘 다듬으면 될 것같아용
+상시는 전체에 하나씩 더해주면 될 것같음, 그리고 
+일단 
+시는 서울시, 경기도, 대전광역시 이렇게 3개 나오게 해야하고,
+나오게 했으면, 구별로 순차적으로 정렬해야함
+
+!! 시 , 구 에 값이 없는 경우는 제외해서 하자 !!
+제외 했고,
+서울시, 경기도, 대전광역시만 나오게 하자!
+
+===== 현재까지 쿼리 Start =====
+
+SELECT 
+    mi.manager_sys_id,
+    ca.sido_nm AS 시,
+    ca.sigungu_nm AS 구,
+    mhd.any_yn AS 상시,
+    mhd.sun_yn AS 일,
+    mhd.mon_yn AS 월,
+    mhd.tue_yn AS 화,
+    mhd.wed_yn AS 수,
+    mhd.thur_yn AS 목,
+    mhd.fri_yn AS 금,
+    mhd.sat_yn AS 토
+FROM 
+    mosimi.itb_manager_info mi 
+INNER JOIN 
+    mosimi.itb_manager_hope_day mhd ON mi.manager_sys_id = mhd.manager_sys_id
+INNER JOIN 
+    mosimi.itb_manager_hope_area mha ON mi.manager_sys_id = mha.manager_sys_id
+LEFT JOIN 
+    mosimi.itb_common_area ca ON ca.sido_cd = mha.hope_sido_cd AND ca.sigungu_cd = mha.hope_sigungu_cd
+WHERE 
+	ca.sido_nm is not NULL and (ca.sido_nm = '서울특별시' OR ca.sido_nm = '경기도' or ca.sido_nm = '대전광역시')
+GROUP BY 
+    mi.manager_sys_id, ca.sido_nm, ca.sigungu_nm, mhd.sun_yn, mhd.mon_yn, mhd.tue_yn, mhd.wed_yn, mhd.thur_yn, mhd.fri_yn, mhd.sat_yn
+ORDER BY 
+    ca.sido_nm DESC, ca.sigungu_nm;
+	
+===== 현재까지 쿼리 End =====
+
+===== 24-02-28 PM 2:16 =====
+
+이제 일월화수목금토 랑 상시 의 Y의 갯수를 세서 표시만 하면 될 것같음
+서브쿼리 개념 다시 공부하고 하자
