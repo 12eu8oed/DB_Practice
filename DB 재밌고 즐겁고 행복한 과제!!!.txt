@@ -160,3 +160,212 @@ ORDER BY
 
 이제 일월화수목금토 랑 상시 의 Y의 갯수를 세서 표시만 하면 될 것같음
 서브쿼리 개념 다시 공부하고 하자
+
+
+===== 대표님 중간 점검 =====
+
+오라클 기준으로 인덱스가 안타는 케이스를 찾아서
+오라클 기준으로 풀스캔 도는 케이스를 찾는 것
+
+풀 스캔, 인덱스 스캔
+
+유니크 인덱스
+
+옵티마이저 => 우선순위?
+
+인덱스를 지정해서 빠르게 쿼리를 수행할 수 있다.
+
+DB의 스캔 종류가 무엇인가?
+DB의 인덱스를 안타는 케이스를 정리하자!!
+
+join 을 시도 코드로 걸어야 한다.
+
+서브쿼리와 조인의 차이 예시 찾아보기
+
+SELECT 
+--     mi.manager_sys_id
+       ca.sido_nm AS 시
+     , ca.sigungu_nm AS 구
+--     , mhd.any_yn AS 상시
+--     , mhd.sun_yn AS 일
+--     , mhd.mon_yn AS 월
+--     , mhd.tue_yn AS 화
+--     , mhd.wed_yn AS 수
+--     , mhd.thur_yn AS 목
+--     , mhd.fri_yn AS 금
+--     , mhd.sat_yn AS 토
+     , CASE WHEN mhd.any_yn  = 'Y' THEN 1 ELSE 0 END AS '상시 가능한 매니저'
+     , CASE WHEN mhd.any_yn  = 'Y' THEN 1
+            WHEN mhd.sun_yn  = 'Y' THEN 1 ELSE 0 END AS '일요일 가능한 매니저'
+     , CASE WHEN mhd.mon_yn  = 'Y' THEN 1 ELSE 0 END AS '월요일 가능한 매니저'
+     , CASE WHEN mhd.tue_yn  = 'Y' THEN 1 ELSE 0 END AS '화요일 가능한 매니저'
+     , CASE WHEN mhd.wed_yn  = 'Y' THEN 1 ELSE 0 END AS '수요일 가능한 매니저'
+     , CASE WHEN mhd.thur_yn = 'Y' THEN 1 ELSE 0 END AS '목요일 가능한 매니저'
+     , CASE WHEN mhd.fri_yn  = 'Y' THEN 1 ELSE 0 END AS '금요일 가능한 매니저'
+     , CASE WHEN mhd.sat_yn  = 'Y' THEN 1 ELSE 0 END AS '토요일 가능한 매니저'
+  FROM mosimi.itb_manager_info mi 
+  JOIN mosimi.itb_manager_hope_day mhd 
+    ON mi.manager_sys_id = mhd.manager_sys_id
+  JOIN mosimi.itb_manager_hope_area mha 
+    ON mi.manager_sys_id = mha.manager_sys_id
+  jOIN mosimi.itb_common_area ca 
+    ON ca.sido_cd = mha.hope_sido_cd AND ca.sigungu_cd = mha.hope_sigungu_cd
+ WHERE ca.sido_nm IS NOT NULL 
+ --  AND (ca.sido_nm = '서울특별시' OR ca.sido_nm = '경기도' or ca.sido_nm = '대전광역시')
+--   AND (ca.sido_cd = '서울특별시' OR ca.sido_cd = '경기도' or ca.sido_cd = '대전광역시')
+   and ca.sido_nm in ('서울특별시','경기도','대전광역시')
+--  GROUP BY ca.sido_cd, ca.sigungu_cd
+ ORDER BY ca.sido_nm DESC, ca.sigungu_nm;
+
+select *
+  from (select a.sido_cd
+		     , a.sido_nm
+		     , a.sigungu_cd 
+		     , a.sigungu_nm
+		  from itb_common_area a
+		 where a.sido_cd in ('11','41','30')
+		 group by a.sido_cd, a.sigungu_cd) area
+	 , 
+
+ 
+ 
+ 
+;
+select a.*
+  from (select 'a' as t_a, 'a' as t_b from dual union
+		select 'b' as t_a, 'a' as t_b from dual union
+		select 'c' as t_a, 'a' as t_b from dual union
+		select 'd' as t_a, 'a' as t_b from dual union
+		select null as t_a , 'a' as t_b from dual) a
+ where -- a.t_a in ('a', '')
+        a.t_a = 'a' or ifnull(a.t_a, '') = ''
+		
+		
+		
+		
+===== 테이블 5개 create code =====
+
+-- mosimi.itb_manager_info definition
+
+CREATE TABLE `itb_manager_info` (
+  `create_by_id` varchar(30) NOT NULL COMMENT '생성자',
+  `create_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일자',
+  `update_by_id` varchar(30) DEFAULT NULL COMMENT '수정자',
+  `update_date` datetime NOT NULL COMMENT '수정일자',
+  `user_id` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '회원ID(e-mail)',
+  `manager_sys_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '매니저시스템ID',
+  `password` varchar(300) NOT NULL COMMENT '비밀번호',
+  `manager_nm` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '매니저이름',
+  `auth` varchar(15) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '권한',
+  `manager_birthdate` varchar(8) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '생년월일',
+  `manager_phone_no` varchar(13) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '휴대폰',
+  `collect_agr_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '개인정보수집및동의여부',
+  `marketing_agr_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '개인정보마케팅활용동의여부',
+  `join_date` datetime DEFAULT NULL COMMENT '가입일자',
+  `social_tp_cd` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '연동가입구분코드',
+  `social_join_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '연동가입ID',
+  `account_active_yn` varchar(1) DEFAULT 'Y' COMMENT '계정활성화여부',
+  `manager_gender` varchar(1) DEFAULT NULL COMMENT '성별',
+  `withdraw_date` date DEFAULT NULL COMMENT '탈퇴일자',
+  `term_use_agr_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '이용약관동의여부',
+  `jumin_no` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '주민등록번호',
+  `fcm_token` varchar(200) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT 'FCM인증토큰',
+  PRIMARY KEY (`manager_sys_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='매니저정보';
+
+
+-- mosimi.itb_manager_hope_area definition
+
+CREATE TABLE `itb_manager_hope_area` (
+  `create_by_id` varchar(30) NOT NULL COMMENT '생성자',
+  `create_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일자',
+  `update_by_id` varchar(30) DEFAULT NULL COMMENT '수정자',
+  `update_date` datetime NOT NULL COMMENT '수정일자',
+  `manager_sys_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '매니저시스템ID',
+  `hope_area_rank` int NOT NULL COMMENT '희망근무지순위',
+  `hope_sido_cd` varchar(2) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '시/도',
+  `hope_sigungu_cd` varchar(3) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '시군구',
+  `hope_gu_cd` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '구',
+  PRIMARY KEY (`manager_sys_id`,`hope_area_rank`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='희망근무지';
+
+-- mosimi.itb_manager_hope_day definition
+
+CREATE TABLE `itb_manager_hope_day` (
+  `create_by_id` varchar(30) NOT NULL COMMENT '생성자',
+  `create_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일자',
+  `update_by_id` varchar(30) DEFAULT NULL COMMENT '수정자',
+  `update_date` datetime NOT NULL COMMENT '수정일자',
+  `manager_sys_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '매니저시스템ID',
+  `any_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '상시',
+  `mon_yn` varchar(1) DEFAULT NULL COMMENT '월요일',
+  `tue_yn` varchar(1) DEFAULT NULL COMMENT '화요일',
+  `wed_yn` varchar(1) DEFAULT NULL COMMENT '수요일',
+  `thur_yn` varchar(1) DEFAULT NULL COMMENT '목요일',
+  `fri_yn` varchar(1) DEFAULT NULL COMMENT '금요일',
+  `sat_yn` varchar(1) DEFAULT NULL COMMENT '토요일',
+  `sun_yn` varchar(1) DEFAULT NULL COMMENT '일요일',
+  PRIMARY KEY (`manager_sys_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='희망근무요일';
+
+-- mosimi.itb_common_area definition
+
+CREATE TABLE `itb_common_area` (
+  `create_by_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '생성자',
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '생성일자',
+  `update_by_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '수정자',
+  `update_date` datetime DEFAULT NULL COMMENT '수정일자',
+  `sido_cd` varchar(3) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '시/도 코드',
+  `sido_nm` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '시/도 명',
+  `sigungu_cd` varchar(3) DEFAULT NULL COMMENT '시/군/구 코드',
+  `sigungu_nm` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '시/군/구 명',
+  `gu_cd` varchar(3) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '구 코드',
+  `gu_nm` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '구 명',
+  `high_tp` varchar(1) DEFAULT NULL COMMENT '상위구분'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- mosimi.itb_manager_detail definition
+
+CREATE TABLE `itb_manager_detail` (
+  `create_by_id` varchar(30) NOT NULL COMMENT '생성자',
+  `create_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일자',
+  `update_by_id` varchar(30) DEFAULT NULL COMMENT '수정자',
+  `update_date` datetime NOT NULL COMMENT '수정일자',
+  `manager_sys_id` varchar(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '매니저시스템ID',
+  `manager_reg_status` varchar(20) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT 'JD10' COMMENT '매니저등록진행상태',
+  `manager_work_status` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'Y' COMMENT '근무가능상태',
+  `career_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '보건의료계열근무경력여부',
+  `career_year` int DEFAULT NULL COMMENT '보건의료계열근무경력년수',
+  `license_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '보건의료계열자격증여부',
+  `attach_file_id` int DEFAULT NULL COMMENT '매니저사진첨부파일ID',
+  `car_own_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '차량소유여부',
+  `remark` varchar(3000) DEFAULT NULL COMMENT '특이사항',
+  `manager_addr` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '매니저 집주소',
+  `manager_addr_dtl` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT NULL COMMENT '매니저 집주소 상세',
+  `drive_able_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '차량운행가능여부',
+  `receive_yn` varchar(1) CHARACTER SET utf8 COLLATE utf8_general_ci DEFAULT 'N' COMMENT '매니저 물품 발송 여부',
+  PRIMARY KEY (`manager_sys_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='매니저정보상세';
+
+===== 2024-02-29 =====
+
+- join 지금 매니저 id로 걸어놨는데, Change to 시군구 코드로 변경하기 => 완료
+
+- 모든 날짜에서 예를 들어 월요일에서 근무가능 매니저수 구하는 것으로 가보자 => 완료
+-- 조건은 2개로 먼저 if 상시꺼가 Y라면, +1 
+-- 그리고 else if로 mon_yn 이 'Y' 이라면 +1
+
+- 근무 가능한 매니저 'Y' 된것 연결해야한다! join을 사용해서 연결하면 될 것같은데
+
+===== 대표님 중간 2차 2024-02-29 오후 3:59=====
+
+master table 먼저 생각하면서 붙히라
+
+1. 마스터 테이블 잡기 (필요한 최소컬럼들) 
+
+( 마스터 테이블로 잡아온 데이터들이 정확한지 먼저 확인하기* )
+
+2. where절의 조건은 마스터 테이블에 대한 조건
+
+3. join으로 테이블을 붙이고 이에 대한 조건은 on 뒤에 and로 연결해서 적용.
+
